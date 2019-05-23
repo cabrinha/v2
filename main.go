@@ -6,6 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	"./commands/ping"
+
+	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
 	"github.com/spf13/viper"
 )
@@ -21,8 +24,6 @@ func init() {
 	if err != nil {
 		panic(fmt.Errorf("Fatal error reading config file: %s", err))
 	}
-
-	pre = viper.GetString("prefix")
 }
 
 func main() {
@@ -38,6 +39,14 @@ func main() {
 		fmt.Println("error opening connection,", err)
 		return
 	}
+
+	router := exrouter.New()
+	router.On("ping", ping.PingRoute)
+	router.On("pong", ping.PongRoute)
+
+	goBot.AddHandler(func(_ *discordgo.Session, m *discordgo.MessageCreate) {
+		router.FindAndExecute(goBot, viper.GetString("prefix"), goBot.State.User.ID, m.Message)
+	})
 
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
@@ -55,5 +64,4 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-
 }
