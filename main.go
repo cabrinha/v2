@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"./commands/ping"
+	"github.com/cabrinha/commands/ping"
 
 	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
