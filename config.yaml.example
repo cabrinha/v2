@@ -1,0 +1,6 @@
+---
+name: 'v2'
+token: 'YOUR_TOKEN_HERE'
+prefix: '!'
+channels:
+  - 'general'
