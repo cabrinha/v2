@@ -6,7 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cabrinha/commands/ping"
+	"github.com/cabrinha/v2/commands/karma"
+	"github.com/cabrinha/v2/commands/ping"
 
 	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
@@ -41,8 +42,16 @@ func main() {
 	}
 
 	router := exrouter.New()
+	// Ping Pong
 	router.On("ping", ping.PingRoute)
 	router.On("pong", ping.PongRoute)
+	// Karma
+	router.On("karma", karma.GetKarma)
+	//router.OnMatch("karmaPlus", karma.MentionsWithSuffix("++"), karma.ApplyWithSuffix(m.User, "++"))
+	//router.OnMatch("karmaMinus", karma.MentionsWithSuffix("--"), karma.ApplyWithSuffix(m.User, "--"))
+
+	//router.OnMatch("karmaPlus", strings.Index(msg, username), karma.Plus)
+	//router.OnMatch("karmaMinus", strings.Index(msg, username), karma.Minus)
 
 	goBot.AddHandler(func(_ *discordgo.Session, m *discordgo.MessageCreate) {
 		router.FindAndExecute(goBot, viper.GetString("prefix"), goBot.State.User.ID, m.Message)
@@ -56,7 +65,6 @@ func main() {
 
 	// Cleanly close down the Discord session.
 	goBot.Close()
-
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -64,4 +72,5 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
+	fmt.Printf("%s :: %s \n", m.Author, m.Content)
 }
