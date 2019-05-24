@@ -47,8 +47,11 @@ func main() {
 	router.On("pong", ping.PongRoute)
 	// Karma
 	router.On("karma", karma.GetKarma)
-	router.On("++", karma.Plus)
-	router.On("--", karma.Minus)
+	router.OnMatch("karmaPlus", karma.MentionsWithSuffix(m.Message, "++"), karma.ApplyWithSuffix(m.User, "++"))
+	router.OnMatch("karmaMinus", karma.MentionsWithSuffix(m.Message, "--"), karma.ApplyWithSuffix(m.User, "--"))
+
+	//router.OnMatch("karmaPlus", strings.Index(msg, username), karma.Plus)
+	//router.OnMatch("karmaMinus", strings.Index(msg, username), karma.Minus)
 
 	goBot.AddHandler(func(_ *discordgo.Session, m *discordgo.MessageCreate) {
 		router.FindAndExecute(goBot, viper.GetString("prefix"), goBot.State.User.ID, m.Message)
@@ -62,7 +65,6 @@ func main() {
 
 	// Cleanly close down the Discord session.
 	goBot.Close()
-
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
