@@ -47,8 +47,8 @@ func main() {
 	router.On("pong", ping.PongRoute)
 	// Karma
 	router.On("karma", karma.GetKarma)
-	router.OnMatch("karmaPlus", karma.MentionsWithSuffix(m.Message, "++"), karma.ApplyWithSuffix(m.User, "++"))
-	router.OnMatch("karmaMinus", karma.MentionsWithSuffix(m.Message, "--"), karma.ApplyWithSuffix(m.User, "--"))
+	//router.OnMatch("karmaPlus", karma.MentionsWithSuffix("++"), karma.ApplyWithSuffix(m.User, "++"))
+	//router.OnMatch("karmaMinus", karma.MentionsWithSuffix("--"), karma.ApplyWithSuffix(m.User, "--"))
 
 	//router.OnMatch("karmaPlus", strings.Index(msg, username), karma.Plus)
 	//router.OnMatch("karmaMinus", strings.Index(msg, username), karma.Minus)
@@ -72,5 +72,5 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	fmt.Printf("Author: %s - Content: %s", m.Author, m.Content)
+	fmt.Printf("Author: %s - Content: %s \n", m.Author, m.Content)
 }
