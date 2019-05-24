@@ -6,7 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/cabrinha/commands/ping"
+	"github.com/cabrinha/v2/commands/karma"
+	"github.com/cabrinha/v2/commands/ping"
 
 	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
@@ -41,8 +42,13 @@ func main() {
 	}
 
 	router := exrouter.New()
+	// Ping Pong
 	router.On("ping", ping.PingRoute)
 	router.On("pong", ping.PongRoute)
+	// Karma
+	router.On("karma", karma.GetKarma)
+	router.On("++", karma.Plus)
+	router.On("--", karma.Minus)
 
 	goBot.AddHandler(func(_ *discordgo.Session, m *discordgo.MessageCreate) {
 		router.FindAndExecute(goBot, viper.GetString("prefix"), goBot.State.User.ID, m.Message)
@@ -64,4 +70,5 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
+	fmt.Printf("Author: %s - Content: %s", m.Author, m.Content)
 }
