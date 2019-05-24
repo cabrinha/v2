@@ -72,5 +72,5 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	fmt.Printf("Author: %s - Content: %s \n", m.Author, m.Content)
+	fmt.Printf("%s :: %s \n", m.Author, m.Content)
 }
