@@ -8,6 +8,7 @@ import (
 
 	"github.com/cabrinha/v2/commands/karma"
 	"github.com/cabrinha/v2/commands/ping"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
@@ -15,6 +16,10 @@ import (
 )
 
 func init() {
+	// Setup our logger
+	log.SetFormatter(&log.JSONFormatter{})
+	log.SetOutput(os.Stdout)
+
 	// Setup our config file and read it
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -28,9 +33,10 @@ func init() {
 }
 
 func main() {
+	// init the bot
 	goBot, err := discordgo.New("Bot " + viper.GetString("token"))
 	if err != nil {
-		fmt.Println("error creating discord session: ", err)
+		log.Warn("error creating discord session: ", err)
 	}
 
 	goBot.AddHandler(messageCreate)
@@ -72,5 +78,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	fmt.Printf("%s :: %s \n", m.Author, m.Content)
+	chanName, _ := s.Channel(m.ChannelID)
+	guildName, _ := s.Guild(m.GuildID)
+	messageLogger := log.WithFields(log.Fields{
+		"author":  m.Author.Username,
+		"server":  guildName.Name,
+		"channel": chanName.Name,
+	})
+	messageLogger.Info(m.Content)
 }
