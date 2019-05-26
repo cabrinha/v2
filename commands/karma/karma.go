@@ -2,6 +2,8 @@ package karma
 
 import (
 	"fmt"
+	"strings"
+	"regexp"
 
 	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
@@ -33,6 +35,7 @@ func GetKarma(ctx *exrouter.Context) {
 	}
 }
 
+// Need a new redis client here
 var red = store.NewClient()
 
 // Just get the score for a user
@@ -45,4 +48,11 @@ func getScore(user *discordgo.User) string {
 		result, err = red.HGet(user.ID, "karma").Result()
 	}
 	return result
+}
+
+// Handler will handle karma commands
+func Handler(ctx *exrouter.Context) {
+	if strings.Contains(ctx.Msg.Content, fmt.Sprintf("%s .*\+\+.*\|.*\-\-.*", ctx.Msg.Author.ID) {
+		ctx.Reply("You can't alter your own karma.")
+	}
 }

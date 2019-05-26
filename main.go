@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -28,7 +27,7 @@ func init() {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(fmt.Errorf("Fatal error reading config file: %s", err))
+		panic(log.Error("Fatal error reading config file: %s", err))
 	}
 }
 
@@ -43,7 +42,7 @@ func main() {
 
 	err = goBot.Open()
 	if err != nil {
-		fmt.Println("error opening connection,", err)
+		log.Warn("error opening connection,", err)
 		return
 	}
 
@@ -53,8 +52,14 @@ func main() {
 	router.On("pong", ping.PongRoute)
 	// Karma
 	router.On("karma", karma.GetKarma)
-	//router.OnMatch("karmaPlus", karma.MentionsWithSuffix("++"), karma.ApplyWithSuffix(m.User, "++"))
-	//router.OnMatch("karmaMinus", karma.MentionsWithSuffix("--"), karma.ApplyWithSuffix(m.User, "--"))
+	/*
+	karma.Handler should determine wether a plus or minus command was made
+	it should also check for mentions and that the author is not the target
+	then, plus and minus should be private functions that make redis calls
+	*/
+	router.OnMatch("+-", dgrouter.NewRegexMatch(".*\+\+.*\|.*\-\-.*"), karma.Handler)
+	//router.OnMatch("plus", karma.MentionsWithSuffix("++"), karma.ApplyWithSuffix(m.User, "++"))
+	//router.OnMatch("minus", karma.MentionsWithSuffix("--"), karma.ApplyWithSuffix(m.User, "--"))
 
 	//router.OnMatch("karmaPlus", strings.Index(msg, username), karma.Plus)
 	//router.OnMatch("karmaMinus", strings.Index(msg, username), karma.Minus)
@@ -64,7 +69,7 @@ func main() {
 	})
 
 	// Wait here until CTRL-C or other term signal is received.
-	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
+	log.Info("Bot is now running. Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc

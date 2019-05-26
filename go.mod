@@ -7,6 +7,7 @@ require (
 	github.com/bwmarrin/discordgo v0.19.0
 	github.com/go-redis/redis v6.15.2+incompatible
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
+	github.com/nsf/gocode v0.0.0-20190302080247-5bee97b48836 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
