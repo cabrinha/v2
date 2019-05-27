@@ -84,7 +84,6 @@ func minus(s *discordgo.Session, m *discordgo.Message, u string) int {
 func isPlus(message string) bool {
 	plusRegex := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+\+\+(.*)?`)
 	matched := plusRegex.MatchString(message)
-	fmt.Println(matched)
 	return matched
 }
 
@@ -133,17 +132,13 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if isPlus(m.Message.Content) {
-		fmt.Println("We have entered the karma.Handler and it isPlus")
 		re := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+\+\+(.*)?`)
 		plusMatch := re.FindStringSubmatch(m.Message.Content)
 		if len(plusMatch) > 0 {
-			fmt.Println("This is plusMatch ", plusMatch)
 			result := make(map[string]string)
 			for i, name := range re.SubexpNames() {
 				if i != 0 && name != "" {
-					fmt.Println("We are in the plusMatch if range: ", i, name)
 					result[name] = plusMatch[i]
-					fmt.Println(result)
 				}
 			}
 			s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf("%s's karma is now at: %d", userNameFromID(s, m.Message, result["userID"]), plus(s, m.Message, result["userID"])))
