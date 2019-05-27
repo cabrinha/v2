@@ -54,27 +54,18 @@ func main() {
 	router.On("pong", ping.PongRoute)
 	// Karma
 	router.On("karma", karma.GetKarma)
-
-	goBot.AddHandler(func(_ *discordgo.Session, m *discordgo.MessageCreate) {
-		router.FindAndExecute(goBot, viper.GetString("prefix"), goBot.State.User.ID, m.Message)
-	})
-
-	/*
-		goBot.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-			if m.Author.ID == s.State.User.ID {
-				return
-			}
-			karma.GetKarma(s, m)
-		})
-	*/
-
 	goBot.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		match, err := regexp.MatchString(`(\-\-|\+\+)`, m.Content)
+		match, err := regexp.MatchString(`(\-\-|\+\+)`, m.Message.Content)
 		if err != nil {
 			log.Error(err)
 		} else if match {
+			fmt.Println("We have triggered the karma.Handler...")
 			karma.Handler(s, m)
 		}
+	})
+
+	goBot.AddHandler(func(_ *discordgo.Session, m *discordgo.MessageCreate) {
+		router.FindAndExecute(goBot, viper.GetString("prefix"), goBot.State.User.ID, m.Message)
 	})
 
 	// Wait here until CTRL-C or other term signal is received.

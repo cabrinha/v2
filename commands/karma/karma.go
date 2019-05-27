@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
 
@@ -17,7 +18,7 @@ import (
 var redisdb = store.NewClient()
 
 // Translate a User ID to a Username
-func userNameFromID(s *discordgo.Session, m *discordgo.MessageCreate, u string) string {
+func userNameFromID(s *discordgo.Session, m *discordgo.Message, u string) string {
 	member, err := s.State.Member(m.GuildID, u)
 	if err != nil {
 		log.Errorf("Fetching member %s failed: %s", u, err)
@@ -27,7 +28,7 @@ func userNameFromID(s *discordgo.Session, m *discordgo.MessageCreate, u string) 
 }
 
 // Check if the message has mentions
-func hasMentions(m *discordgo.MessageCreate) bool {
+func hasMentions(m *discordgo.Message) bool {
 	if len(m.Mentions) > 0 {
 		return true
 	}
@@ -35,7 +36,7 @@ func hasMentions(m *discordgo.MessageCreate) bool {
 }
 
 // Just get the score for a user
-func getScore(s *discordgo.Session, m *discordgo.MessageCreate, u string) (int, error) {
+func getScore(s *discordgo.Session, m *discordgo.Message, u string) (int, error) {
 	log.Infof("Getting karma score for user: %s", userNameFromID(s, m, u))
 	result, err := redisdb.HGet(u, "karma").Result()
 	if err == redis.Nil {
@@ -47,7 +48,7 @@ func getScore(s *discordgo.Session, m *discordgo.MessageCreate, u string) (int, 
 	return strconv.Atoi(result)
 }
 
-func plus(s *discordgo.Session, m *discordgo.MessageCreate, u string) int {
+func plus(s *discordgo.Session, m *discordgo.Message, u string) int {
 	var i int
 	for _, u := range m.Mentions {
 		i, _ = getScore(s, m, u.ID)
@@ -63,7 +64,7 @@ func plus(s *discordgo.Session, m *discordgo.MessageCreate, u string) int {
 	return i
 }
 
-func minus(s *discordgo.Session, m *discordgo.MessageCreate, u string) int {
+func minus(s *discordgo.Session, m *discordgo.Message, u string) int {
 	var i int
 	for _, u := range m.Mentions {
 		i, _ = getScore(s, m, u.ID)
@@ -80,120 +81,85 @@ func minus(s *discordgo.Session, m *discordgo.MessageCreate, u string) int {
 }
 
 // Check if we have a match, return bool and capture group names
-func isPlus(user string, message string) bool {
+func isPlus(message string) bool {
 	plusRegex := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+\+\+(.*)?`)
-	matched, err := regexp.MatchString(fmt.Sprintf(plusRegex.String(), user), message)
-	if err != nil {
-		panic(err)
-	}
+	matched := plusRegex.MatchString(message)
+	fmt.Println(matched)
 	return matched
 }
 
-func isMinus(user string, message string) bool {
+func isMinus(message string) bool {
 	minusRegex := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+--(.*)?`)
-	matched, err := regexp.MatchString(fmt.Sprintf(minusRegex.String(), user), message)
-	if err != nil {
-		panic(err)
-	}
+	matched := minusRegex.MatchString(message)
 	return matched
 }
 
 // GetKarma gets a user's karma score and returns it
-func GetKarma(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if hasMentions(m) {
+func GetKarma(ctx *exrouter.Context) {
+	if hasMentions(ctx.Msg) {
 		scores := make(map[string]string)
-		for _, u := range m.Mentions {
-			score, err := getScore(s, m, u.ID)
+		for _, u := range ctx.Msg.Mentions {
+			score, err := getScore(ctx.Ses, ctx.Msg, u.ID)
 			if err != nil {
 				log.Error(err)
 			}
 			scores[u.Username] = strconv.Itoa(score)
 		}
 		for k, v := range scores {
-			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", k, v))
+			ctx.Ses.ChannelMessageSend(ctx.Msg.ChannelID, fmt.Sprintf("%s: %s", k, v))
 		}
 	} else {
-		score, err := getScore(s, m, m.Author.ID)
+		score, err := getScore(ctx.Ses, ctx.Msg, ctx.Msg.Author.ID)
 		if err != nil {
 			log.Error(err)
 		}
-		s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s, your score is %d", m.Author.Mention(), score))
+		ctx.Ses.ChannelMessageSend(ctx.Msg.ChannelID, fmt.Sprintf("%s, your score is %d", ctx.Msg.Author.Mention(), score))
 	}
 }
 
 // Handler handles the updating of karma scores
 func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Ignore all messages created by the bot itself
-	if m.Author.ID == s.State.User.ID {
+	if m.Message.Author.ID == s.State.User.ID {
 		return
 	}
 
 	// If the author is trying to message their own karma: don't
-	for _, u := range m.Mentions {
-		if u.ID == m.Author.ID {
-			s.ChannelMessageSend(m.ChannelID, "You can't alter your own karma.")
+	for _, u := range m.Message.Mentions {
+		if u.ID == m.Message.Author.ID {
+			s.ChannelMessageSend(m.Message.ChannelID, "You can't alter your own karma.")
 			return
 		}
 	}
 
-	for _, u := range m.Mentions {
-		if isPlus(u.ID, m.Content) {
-			plusRegex := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+\+\+(.*)?`)
-			plusMatch := plusRegex.FindStringSubmatch(m.Content)
-			if len(plusMatch) > 0 {
-				result := make(map[string]string)
-				for i, name := range plusRegex.SubexpNames() {
-					if i != 0 && name != "" {
-						result[name] = plusMatch[i]
-					}
-					s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s's karma is now at: %d", userNameFromID(s, m, result["userID"]), plus(s, m, result["userID"])))
-				}
-			}
-		}
-		if isMinus(u.ID, m.Content) {
-			minusRegex := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+--(.*)?`)
-			minusMatch := minusRegex.FindStringSubmatch(m.Content)
-			if len(minusMatch) > 0 {
-				result := make(map[string]string)
-				for i, name := range minusRegex.SubexpNames() {
-					if i != 0 && name != "" {
-						result[name] = minusMatch[i]
-					}
-					s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s's karma is now at: %d", userNameFromID(s, m, result["userID"]), minus(s, m, result["userID"])))
-				}
-			}
-		}
-	}
-}
-
-/*
-// Handler will handle karma commands
-func Handler(ctx *exrouter.Context) {
-	rePlus := regexp.MustCompile(`\!\+\+\s+<@(?P<userID>\d{18}).*`)
-	reMinus := regexp.MustCompile(`\!\-\-\s+<@(?P<userID>\d{18}).*`)
-	if !authorInContent(ctx) {
-		plusMatch := rePlus.FindStringSubmatch(ctx.Msg.Content)
+	if isPlus(m.Message.Content) {
+		fmt.Println("We have entered the karma.Handler and it isPlus")
+		re := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+\+\+(.*)?`)
+		plusMatch := re.FindStringSubmatch(m.Message.Content)
 		if len(plusMatch) > 0 {
+			fmt.Println("This is plusMatch ", plusMatch)
 			result := make(map[string]string)
-			for i, name := range rePlus.SubexpNames() {
+			for i, name := range re.SubexpNames() {
 				if i != 0 && name != "" {
+					fmt.Println("We are in the plusMatch if range: ", i, name)
 					result[name] = plusMatch[i]
+					fmt.Println(result)
 				}
 			}
-			ctx.Reply(fmt.Sprintf("%s's karma is now at: %d", userNameFromID(ctx, result["userID"]), plus(ctx, result["userID"])))
-		} else {
-			minusMatch := reMinus.FindStringSubmatch(ctx.Msg.Content)
-			if len(minusMatch) > 0 {
-				result := make(map[string]string)
-				for i, name := range reMinus.SubexpNames() {
-					if i != 0 && name != "" {
-						result[name] = minusMatch[i]
-					}
+			s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf("%s's karma is now at: %d", userNameFromID(s, m.Message, result["userID"]), plus(s, m.Message, result["userID"])))
+		}
+	}
+	if isMinus(m.Message.Content) {
+		re := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+--(.*)?`)
+		minusMatch := re.FindStringSubmatch(m.Message.Content)
+		if len(minusMatch) > 0 {
+			result := make(map[string]string)
+			for i, name := range re.SubexpNames() {
+				if i != 0 && name != "" {
+					result[name] = minusMatch[i]
 				}
-				ctx.Reply(
-					fmt.Sprintf("%s's karma is now at: %d", userNameFromID(ctx, result["userID"]), minus(ctx, result["userID"])))
 			}
+			s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf("%s's karma is now at: %d", userNameFromID(s, m.Message, result["userID"]), minus(s, m.Message, result["userID"])))
 		}
 	}
 }
-*/
