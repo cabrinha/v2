@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -9,6 +10,7 @@ import (
 	"github.com/cabrinha/v2/commands/ping"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/Necroforger/dgrouter"
 	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
 	"github.com/spf13/viper"
@@ -27,7 +29,7 @@ func init() {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(log.Error("Fatal error reading config file: %s", err))
+		panic(fmt.Errorf("Fatal error reading config file: %s", err))
 	}
 }
 
@@ -52,17 +54,7 @@ func main() {
 	router.On("pong", ping.PongRoute)
 	// Karma
 	router.On("karma", karma.GetKarma)
-	/*
-	karma.Handler should determine wether a plus or minus command was made
-	it should also check for mentions and that the author is not the target
-	then, plus and minus should be private functions that make redis calls
-	*/
-	router.OnMatch("+-", dgrouter.NewRegexMatch(".*\+\+.*\|.*\-\-.*"), karma.Handler)
-	//router.OnMatch("plus", karma.MentionsWithSuffix("++"), karma.ApplyWithSuffix(m.User, "++"))
-	//router.OnMatch("minus", karma.MentionsWithSuffix("--"), karma.ApplyWithSuffix(m.User, "--"))
-
-	//router.OnMatch("karmaPlus", strings.Index(msg, username), karma.Plus)
-	//router.OnMatch("karmaMinus", strings.Index(msg, username), karma.Minus)
+	router.OnMatch("+-", dgrouter.NewRegexMatcher(`(\-\-|\+\+)`), karma.Handler)
 
 	goBot.AddHandler(func(_ *discordgo.Session, m *discordgo.MessageCreate) {
 		router.FindAndExecute(goBot, viper.GetString("prefix"), goBot.State.User.ID, m.Message)
