@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 
 	"github.com/cabrinha/v2/commands/karma"
 	"github.com/cabrinha/v2/commands/ping"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/Necroforger/dgrouter"
 	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
 	"github.com/spf13/viper"
@@ -54,10 +54,27 @@ func main() {
 	router.On("pong", ping.PongRoute)
 	// Karma
 	router.On("karma", karma.GetKarma)
-	router.OnMatch("+-", dgrouter.NewRegexMatcher(`(\-\-|\+\+)`), karma.Handler)
 
 	goBot.AddHandler(func(_ *discordgo.Session, m *discordgo.MessageCreate) {
 		router.FindAndExecute(goBot, viper.GetString("prefix"), goBot.State.User.ID, m.Message)
+	})
+
+	/*
+		goBot.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+			if m.Author.ID == s.State.User.ID {
+				return
+			}
+			karma.GetKarma(s, m)
+		})
+	*/
+
+	goBot.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		match, err := regexp.MatchString(`(\-\-|\+\+)`, m.Content)
+		if err != nil {
+			log.Error(err)
+		} else if match {
+			karma.Handler(s, m)
+		}
 	})
 
 	// Wait here until CTRL-C or other term signal is received.
