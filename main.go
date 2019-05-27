@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 
 	"github.com/cabrinha/v2/commands/karma"
 	"github.com/cabrinha/v2/commands/ping"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
@@ -15,6 +17,10 @@ import (
 )
 
 func init() {
+	// Setup our logger
+	log.SetFormatter(&log.JSONFormatter{})
+	log.SetOutput(os.Stdout)
+
 	// Setup our config file and read it
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -28,16 +34,17 @@ func init() {
 }
 
 func main() {
+	// init the bot
 	goBot, err := discordgo.New("Bot " + viper.GetString("token"))
 	if err != nil {
-		fmt.Println("error creating discord session: ", err)
+		log.Warn("error creating discord session: ", err)
 	}
 
 	goBot.AddHandler(messageCreate)
 
 	err = goBot.Open()
 	if err != nil {
-		fmt.Println("error opening connection,", err)
+		log.Warn("error opening connection,", err)
 		return
 	}
 
@@ -47,18 +54,22 @@ func main() {
 	router.On("pong", ping.PongRoute)
 	// Karma
 	router.On("karma", karma.GetKarma)
-	//router.OnMatch("karmaPlus", karma.MentionsWithSuffix("++"), karma.ApplyWithSuffix(m.User, "++"))
-	//router.OnMatch("karmaMinus", karma.MentionsWithSuffix("--"), karma.ApplyWithSuffix(m.User, "--"))
-
-	//router.OnMatch("karmaPlus", strings.Index(msg, username), karma.Plus)
-	//router.OnMatch("karmaMinus", strings.Index(msg, username), karma.Minus)
+	goBot.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		match, err := regexp.MatchString(`(\-\-|\+\+)`, m.Message.Content)
+		if err != nil {
+			log.Error(err)
+		} else if match {
+			fmt.Println("We have triggered the karma.Handler...")
+			karma.Handler(s, m)
+		}
+	})
 
 	goBot.AddHandler(func(_ *discordgo.Session, m *discordgo.MessageCreate) {
 		router.FindAndExecute(goBot, viper.GetString("prefix"), goBot.State.User.ID, m.Message)
 	})
 
 	// Wait here until CTRL-C or other term signal is received.
-	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
+	log.Info("Bot is now running. Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
@@ -72,5 +83,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	fmt.Printf("%s :: %s \n", m.Author, m.Content)
+	chanName, _ := s.Channel(m.ChannelID)
+	guildName, _ := s.Guild(m.GuildID)
+	messageLogger := log.WithFields(log.Fields{
+		"author":  m.Author.Username,
+		"server":  guildName.Name,
+		"channel": chanName.Name,
+	})
+	messageLogger.Info(m.Content)
 }
