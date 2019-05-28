@@ -59,7 +59,6 @@ func main() {
 		if err != nil {
 			log.Error(err)
 		} else if match {
-			fmt.Println("We have triggered the karma.Handler...")
 			karma.Handler(s, m)
 		}
 	})
