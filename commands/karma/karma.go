@@ -29,10 +29,7 @@ func userNameFromID(s *discordgo.Session, m *discordgo.Message, u string) string
 
 // Check if the message has mentions
 func hasMentions(m *discordgo.Message) bool {
-	if len(m.Mentions) > 0 {
-		return true
-	}
-	return false
+	return len(m.Mentions) > 0
 }
 
 // Just get the score for a user
@@ -40,15 +37,16 @@ func getScore(s *discordgo.Session, m *discordgo.Message, u string) (int, error)
 	log.Infof("Getting karma score for user: %s", userNameFromID(s, m, u))
 	result, err := redisdb.HGet(u, "karma").Result()
 	if err == redis.Nil {
-		log.Error("error fetching karma score for user: ", u, err)
-		log.Info("creating a 0 score for user: ", u)
+		log.Error("Error fetching karma score for user: ", u, err)
+		log.Info("Creating a 0 score for user: ", u)
 		redisdb.HSet(u, "karma", 0)
 		return 0, nil
 	}
 	return strconv.Atoi(result)
 }
 
-func plus(s *discordgo.Session, m *discordgo.Message, u string) int {
+// Alter the karma for a user
+func plus(s *discordgo.Session, m *discordgo.Message) int {
 	var i int
 	for _, u := range m.Mentions {
 		i, _ = getScore(s, m, u.ID)
@@ -64,7 +62,7 @@ func plus(s *discordgo.Session, m *discordgo.Message, u string) int {
 	return i
 }
 
-func minus(s *discordgo.Session, m *discordgo.Message, u string) int {
+func minus(s *discordgo.Session, m *discordgo.Message) int {
 	var i int
 	for _, u := range m.Mentions {
 		i, _ = getScore(s, m, u.ID)
@@ -80,7 +78,7 @@ func minus(s *discordgo.Session, m *discordgo.Message, u string) int {
 	return i
 }
 
-// Check if we have a match, return bool and capture group names
+// Check if we have a plus or minus match, return bool
 func isPlus(message string) bool {
 	plusRegex := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+\+\+(.*)?`)
 	matched := plusRegex.MatchString(message)
@@ -91,6 +89,25 @@ func isMinus(message string) bool {
 	minusRegex := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+--(.*)?`)
 	matched := minusRegex.MatchString(message)
 	return matched
+}
+
+// Alter karma in a given direction based on regex
+func alterKarma(p string, m *discordgo.MessageCreate, s *discordgo.Session, plusOrMinus func(s *discordgo.Session, m *discordgo.Message) int) {
+	re := regexp.MustCompile(p)
+	match := re.FindStringSubmatch(m.Message.Content)
+	if len(match) > 0 {
+		result := make(map[string]string)
+		for i, name := range re.SubexpNames() {
+			if i != 0 && name != "" {
+				result[name] = match[i]
+			}
+		}
+		s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf(
+			"%s's karma is now at: %d",
+			userNameFromID(s, m.Message, result["userID"]),
+			plusOrMinus(s, m.Message),
+		))
+	}
 }
 
 // GetKarma gets a user's karma score and returns it
@@ -132,29 +149,9 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if isPlus(m.Message.Content) {
-		re := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+\+\+(.*)?`)
-		plusMatch := re.FindStringSubmatch(m.Message.Content)
-		if len(plusMatch) > 0 {
-			result := make(map[string]string)
-			for i, name := range re.SubexpNames() {
-				if i != 0 && name != "" {
-					result[name] = plusMatch[i]
-				}
-			}
-			s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf("%s's karma is now at: %d", userNameFromID(s, m.Message, result["userID"]), plus(s, m.Message, result["userID"])))
-		}
+		alterKarma(`(.*)?<@(!)?(?P<userID>\d{18})>\s+\+\+(.*)?`, m, s, plus)
 	}
 	if isMinus(m.Message.Content) {
-		re := regexp.MustCompile(`(.*)?<@(!)?(?P<userID>\d{18})>\s+--(.*)?`)
-		minusMatch := re.FindStringSubmatch(m.Message.Content)
-		if len(minusMatch) > 0 {
-			result := make(map[string]string)
-			for i, name := range re.SubexpNames() {
-				if i != 0 && name != "" {
-					result[name] = minusMatch[i]
-				}
-			}
-			s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf("%s's karma is now at: %d", userNameFromID(s, m.Message, result["userID"]), minus(s, m.Message, result["userID"])))
-		}
+		alterKarma(`(.*)?<@(!)?(?P<userID>\d{18})>\s+--(.*)?`, m, s, minus)
 	}
 }
