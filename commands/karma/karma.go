@@ -143,7 +143,7 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// If the author is trying to message their own karma: don't
 	for _, u := range m.Message.Mentions {
 		if u.ID == m.Message.Author.ID {
-			s.ChannelMessageSend(m.Message.ChannelID, "Alerting your own karma is bad Karma.")
+			s.ChannelMessageSend(m.Message.ChannelID, "Altering your own karma is bad Karma.")
                         alterKarma(`(.*)?<@(!)?(?P<userID>\d{18})>\s+--(.*)?`, m, s, minus)
 			return
 		}
