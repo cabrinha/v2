@@ -2,6 +2,8 @@
 
 A discord bot written in go.
 
+[![Go report](http://goreportcard.com/badge/cabrinha/v2)](http://goreportcard.com/report/cabrinha/v2)
+
 ## Libraries
 
 The main library in use is [discordgo](https://github.com/bwmarrin/discordgo).
