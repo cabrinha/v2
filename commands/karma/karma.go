@@ -8,14 +8,11 @@ import (
 
 	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
+	"github.com/cabrinha/v2/plugins/store"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/cabrinha/v2/plugins/store"
 	"github.com/go-redis/redis"
 )
-
-// Need a new redis client here
-var redisdb = store.NewClient()
 
 // Translate a User ID to a Username
 func userNameFromID(s *discordgo.Session, m *discordgo.Message, u string) string {
@@ -35,11 +32,11 @@ func hasMentions(m *discordgo.Message) bool {
 // Just get the score for a user
 func getScore(s *discordgo.Session, m *discordgo.Message, u string) (int, error) {
 	log.Infof("Getting karma score for user: %s", userNameFromID(s, m, u))
-	result, err := redisdb.HGet(u, "karma").Result()
+	result, err := store.Client.Get(fmt.Sprintf("%s:karma", u)).Result()
 	if err == redis.Nil {
 		log.Error("Error fetching karma score for user: ", u, err)
 		log.Info("Creating a 0 score for user: ", u)
-		redisdb.HSet(u, "karma", 0)
+		store.Client.Set(fmt.Sprintf("%s:karma", u), 0, 0)
 		return 0, nil
 	}
 	return strconv.Atoi(result)
@@ -51,7 +48,7 @@ func plus(s *discordgo.Session, m *discordgo.Message) int {
 	for _, u := range m.Mentions {
 		i, _ = getScore(s, m, u.ID)
 		newScore := i + 1
-		result := redisdb.HSet(u.ID, "karma", newScore)
+		result := store.Client.Set(fmt.Sprintf("%s:karma", u.ID), newScore, 0)
 		if result.Err() != redis.Nil {
 			log.Infof("Set new score for user ID: %s to %d", u, newScore)
 			return newScore
@@ -67,7 +64,7 @@ func minus(s *discordgo.Session, m *discordgo.Message) int {
 	for _, u := range m.Mentions {
 		i, _ = getScore(s, m, u.ID)
 		newScore := i - 1
-		result := redisdb.HSet(u.ID, "karma", newScore)
+		result := store.Client.Set(fmt.Sprintf("%s:karma", u), newScore, 0)
 		if result.Err() != redis.Nil {
 			log.Infof("Set new score for user ID: %s to %d", u, newScore)
 			return newScore
