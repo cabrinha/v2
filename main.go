@@ -9,6 +9,8 @@ import (
 
 	"github.com/cabrinha/v2/commands/karma"
 	"github.com/cabrinha/v2/commands/ping"
+	"github.com/cabrinha/v2/commands/quotes"
+	"github.com/cabrinha/v2/plugins/store"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/Necroforger/dgrouter/exrouter"
@@ -34,27 +36,34 @@ func init() {
 }
 
 func main() {
+	// initialize our redis client
+	store.NewClient()
+
 	// init the bot
-	goBot, err := discordgo.New("Bot " + viper.GetString("token"))
+	bot, err := discordgo.New("Bot " + viper.GetString("token"))
 	if err != nil {
 		log.Warn("error creating discord session: ", err)
 	}
 
-	goBot.AddHandler(messageCreate)
+	bot.AddHandler(messageCreate)
 
-	err = goBot.Open()
+	err = bot.Open()
 	if err != nil {
-		log.Warn("error opening connection,", err)
+		log.Error("error opening connection,", err)
 		return
 	}
 
+	bot.State.MaxMessageCount = 50
+
 	router := exrouter.New()
 	// Ping Pong
-	router.On("ping", ping.PingRoute)
-	router.On("pong", ping.PongRoute)
+	router.On("ping", ping.PingRoute).Desc("sends a pong")
+	router.On("pong", ping.PongRoute).Desc("sends a ping")
 	// Karma
-	router.On("karma", karma.GetKarma)
-	goBot.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+	router.On("karma", karma.GetKarma).Desc("gets karma by user or your karma if no user specified\n\t\t" +
+		"@user ++ will add karma\n\t\t" +
+		"@user -- will remove karma")
+	bot.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		match, err := regexp.MatchString(`(\-\-|\+\+)`, m.Message.Content)
 		if err != nil {
 			log.Error(err)
@@ -62,9 +71,22 @@ func main() {
 			karma.Handler(s, m)
 		}
 	})
+	// Quotes
+	router.On("grab", quotes.Grab).Desc("grab quote by user or phrase")
+	router.On("rq", quotes.RandomQuote).Desc("recall a random quote")
 
-	goBot.AddHandler(func(_ *discordgo.Session, m *discordgo.MessageCreate) {
-		router.FindAndExecute(goBot, viper.GetString("prefix"), goBot.State.User.ID, m.Message)
+	// Help
+	router.Default = router.On("help", func(ctx *exrouter.Context) {
+		var text = ""
+		for _, v := range router.Routes {
+			text += v.Name + " : \t" + v.Description + "\n"
+		}
+		ctx.Reply("```" + text + "```")
+	}).Desc("prints this help menu")
+
+	// Establish routes for all commands managed by router
+	bot.AddHandler(func(_ *discordgo.Session, m *discordgo.MessageCreate) {
+		router.FindAndExecute(bot, viper.GetString("prefix"), bot.State.User.ID, m.Message)
 	})
 
 	// Wait here until CTRL-C or other term signal is received.
@@ -74,7 +96,7 @@ func main() {
 	<-sc
 
 	// Cleanly close down the Discord session.
-	goBot.Close()
+	bot.Close()
 }
 
 func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -82,6 +104,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
+
 	chanName, _ := s.Channel(m.ChannelID)
 	guildName, _ := s.Guild(m.GuildID)
 	messageLogger := log.WithFields(log.Fields{
@@ -89,5 +112,5 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		"server":  guildName.Name,
 		"channel": chanName.Name,
 	})
-	messageLogger.Info(m.Content)
+	messageLogger.Info(m.ContentWithMentionsReplaced())
 }
