@@ -1,0 +1,12 @@
+version: "3.7"
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - 6379:6379
+  bot:
+    links:
+      - redis
+    build:
+      context: .
+      dockerfile: Dockerfile

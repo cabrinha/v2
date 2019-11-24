@@ -49,7 +49,7 @@ func main() {
 
 	err = bot.Open()
 	if err != nil {
-		log.Error("error opening connection,", err)
+		log.Error("error opening connection, ", err)
 		return
 	}
 
