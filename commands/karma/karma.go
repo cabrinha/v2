@@ -141,7 +141,7 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	for _, u := range m.Message.Mentions {
 		if u.ID == m.Message.Author.ID {
 			s.ChannelMessageSend(m.Message.ChannelID, "Altering your own karma is bad karma.")
-                        alterKarma(`(.*)?<@(!)?(?P<userID>\d{18})>\s+--(.*)?`, m, s, minus)
+			alterKarma(`(.*)?<@(!)?(?P<userID>\d{18})>\s+(.*)?`, m, s, minus)
 			return
 		}
 	}
@@ -150,6 +150,6 @@ func Handler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		alterKarma(`(.*)?<@(!)?(?P<userID>\d{18})>\s+\+\+(.*)?`, m, s, plus)
 	}
 	if isMinus(m.Message.Content) {
-		alterKarma(`(.*)?<@(!)?(?P<userID>\d{18})>\s+--(.*)?`, m, s, minus)
+		alterKarma(`(.*)?<@(!)?(?P<userID>\d{18})>\s+\-\-(.*)?`, m, s, minus)
 	}
 }
