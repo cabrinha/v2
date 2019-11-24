@@ -13,6 +13,7 @@ import (
 	"github.com/cabrinha/v2/plugins/store"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/Necroforger/dgrouter"
 	"github.com/Necroforger/dgrouter/exrouter"
 	"github.com/bwmarrin/discordgo"
 	"github.com/spf13/viper"
@@ -57,8 +58,8 @@ func main() {
 
 	router := exrouter.New()
 	// Ping Pong
-	router.On("ping", ping.PingRoute).Desc("sends a pong")
-	router.On("pong", ping.PongRoute).Desc("sends a ping")
+	//router.On("ping", ping.Route).Desc("sends a ping/pong")
+	router.OnMatch("PingPong", dgrouter.NewRegexMatcher("p(i|o)ng"), ping.Route).Desc("sends a ping or pong")
 	// Karma
 	router.On("karma", karma.GetKarma).Desc("gets karma by user or your karma if no user specified\n\t\t" +
 		"@user ++ will add karma\n\t\t" +
