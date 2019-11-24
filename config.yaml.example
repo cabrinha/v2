@@ -1,6 +1,7 @@
 ---
 name: 'v2'
-token: 'YOUR_TOKEN_HERE'
+token: 'YOUR_DISCORD_TOKEN_HERE'
 prefix: '!'
+redis_host: 'redis:6379'
 channels:
   - 'general'
