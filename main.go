@@ -58,7 +58,6 @@ func main() {
 
 	router := exrouter.New()
 	// Ping Pong
-	//router.On("ping", ping.Route).Desc("sends a ping/pong")
 	router.OnMatch("PingPong", dgrouter.NewRegexMatcher("p(i|o)ng"), ping.Route).Desc("sends a ping or pong")
 	// Karma
 	router.On("karma", karma.GetKarma).Desc("gets karma by user or your karma if no user specified\n\t\t" +
