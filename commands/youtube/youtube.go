@@ -28,7 +28,7 @@ func Search(ctx *exrouter.Context) {
 	// Make the API call to YouTube
 	call := service.Search.List("id,snippet").
 		Q(args).
-		MaxResults(1)
+		MaxResults(1) // Only fetch one result
 	response, err := call.Do()
 	if err != nil {
 		log.Info(err)
@@ -36,8 +36,7 @@ func Search(ctx *exrouter.Context) {
 
 	videoID := response.Items[0].Id.VideoId
 	videoTitle := response.Items[0].Snippet.Title
-
-	// "https://youtube.com/watch?v=", id
+	// Format the reply as <link> - <title>
 	reply := fmt.Sprintf("https://youtube.com/watch?v=%s - %s", videoID, videoTitle)
 
 	ctx.Reply(reply)
