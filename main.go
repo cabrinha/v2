@@ -10,6 +10,7 @@ import (
 	"github.com/cabrinha/v2/commands/karma"
 	"github.com/cabrinha/v2/commands/ping"
 	"github.com/cabrinha/v2/commands/quotes"
+	"github.com/cabrinha/v2/commands/youtube"
 	"github.com/cabrinha/v2/plugins/store"
 	log "github.com/sirupsen/logrus"
 
@@ -41,7 +42,7 @@ func main() {
 	store.NewClient()
 
 	// init the bot
-	bot, err := discordgo.New("Bot " + viper.GetString("token"))
+	bot, err := discordgo.New("Bot " + viper.GetString("discord.token"))
 	if err != nil {
 		log.Warn("error creating discord session: ", err)
 	}
@@ -74,6 +75,9 @@ func main() {
 	// Quotes
 	router.On("grab", quotes.Grab).Desc("grab quote by user or phrase")
 	router.On("rq", quotes.RandomQuote).Desc("recall a random quote")
+
+	// YouTube
+	router.On("yt", youtube.Search).Desc("Search YouTube for a video")
 
 	// Help
 	router.Default = router.On("help", func(ctx *exrouter.Context) {

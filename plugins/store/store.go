@@ -12,7 +12,7 @@ var Client *redis.Client
 // NewClient creates a redis client connection
 func NewClient() {
 	Client = redis.NewClient(&redis.Options{
-		Addr:     viper.GetString("redis_host"),
+		Addr:     viper.GetString("redis.host"),
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})

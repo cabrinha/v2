@@ -1,0 +1,44 @@
+package youtube
+
+import (
+	"fmt"
+	"net/http"
+
+	"github.com/Necroforger/dgrouter/exrouter"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+	"google.golang.org/api/googleapi/transport"
+	"google.golang.org/api/youtube/v3"
+)
+
+// Search searches YouTube for videos
+func Search(ctx *exrouter.Context) {
+	developerKey := viper.GetString("youtube.key")
+	args := ctx.Args.After(1)
+
+	client := &http.Client{
+		Transport: &transport.APIKey{Key: developerKey},
+	}
+
+	service, err := youtube.New(client)
+	if err != nil {
+		log.Fatalf("Error creating new YouTube client: %v", err)
+	}
+
+	// Make the API call to YouTube
+	call := service.Search.List("id,snippet").
+		Q(args).
+		MaxResults(1)
+	response, err := call.Do()
+	if err != nil {
+		log.Info(err)
+	}
+
+	videoID := response.Items[0].Id.VideoId
+	videoTitle := response.Items[0].Snippet.Title
+
+	// "https://youtube.com/watch?v=", id
+	reply := fmt.Sprintf("https://youtube.com/watch?v=%s - %s", videoID, videoTitle)
+
+	ctx.Reply(reply)
+}

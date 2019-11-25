@@ -1,7 +1,11 @@
 ---
 name: 'v2'
-token: 'YOUR_DISCORD_TOKEN_HERE'
+discord:
+  token: 'YOUR_DISCORD_TOKEN'
 prefix: '!'
-redis_host: 'redis:6379'
+redis:
+  host: 'redis:6379'
 channels:
   - 'general'
+youtube:
+  key: 'YOUR_YOUTUBE_DEVELOPER_KEY'
