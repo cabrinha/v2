@@ -58,8 +58,10 @@ func main() {
 	bot.State.MaxMessageCount = 50
 
 	router := exrouter.New()
+
 	// Ping Pong
 	router.OnMatch("PingPong", dgrouter.NewRegexMatcher("p(i|o)ng"), ping.Route).Desc("sends a ping or pong")
+
 	// Karma
 	router.On("karma", karma.GetKarma).Desc("gets karma by user or your karma if no user specified\n\t\t" +
 		"@user ++ will add karma\n\t\t" +
@@ -72,12 +74,13 @@ func main() {
 			karma.Handler(s, m)
 		}
 	})
+
 	// Quotes
 	router.On("grab", quotes.Grab).Desc("grab quote by user or phrase")
 	router.On("rq", quotes.RandomQuote).Desc("recall a random quote")
 
 	// YouTube
-	router.On("yt", youtube.SearchReply).Desc("Search YouTube for a video")
+	router.On("yt", youtube.Search).Desc("YouTube search")
 
 	// Help
 	router.Default = router.On("help", func(ctx *exrouter.Context) {

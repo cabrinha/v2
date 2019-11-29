@@ -12,7 +12,7 @@ import (
 )
 
 // Search searches YouTube for videos
-func Search(ctx *exrouter.Context) string {
+func search(ctx *exrouter.Context) string {
 	developerKey := viper.GetString("youtube.key")
 	args := ctx.Args.After(1)
 
@@ -46,7 +46,7 @@ func Search(ctx *exrouter.Context) string {
 	return reply
 }
 
-// SearchReply replies with the search result
-func SearchReply(ctx *exrouter.Context) {
-	ctx.Reply(Search(ctx))
+// Search replies with the search result
+func Search(ctx *exrouter.Context) {
+	ctx.Reply(search(ctx))
 }
