@@ -77,7 +77,7 @@ func main() {
 	router.On("rq", quotes.RandomQuote).Desc("recall a random quote")
 
 	// YouTube
-	router.On("yt", youtube.Search).Desc("Search YouTube for a video")
+	router.On("yt", youtube.SearchReply).Desc("Search YouTube for a video")
 
 	// Help
 	router.Default = router.On("help", func(ctx *exrouter.Context) {
